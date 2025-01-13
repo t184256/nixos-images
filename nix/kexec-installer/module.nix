@@ -5,6 +5,22 @@ let
 
   # does not link with iptables enabled
   iprouteStatic = pkgs.pkgsStatic.iproute2.override { iptables = null; };
+  xen-aware-kexec-tools' = pkgs.pkgsStatic.kexec-tools.overrideAttrs (oa:  {
+    nativeBuildInputs = oa.buildInputs ++ [ pkgs.pkg-config ];
+    buildInputs = oa.buildInputs ++ [ pkgs.xen ];
+    LDFLAGS = "-lxencall";
+    #LDFLAGS = "-L${pkgs.xen}/lib -lxencall";
+    #ac_cv_lib_xenctrl_xc_kexec_load = "yes";
+    #configureFlags = [ "--with-xen=dl" ];
+  });
+  #xen-aware-kexec-tools' = pkgs.pkgsStatic.kexec-tools.overrideAttrs (oa:  {
+  #  nativeBuildInputs = oa.buildInputs ++ [ pkgs.pkg-config ];
+  #  buildInputs = oa.buildInputs ++ [ pkgs.xen ];
+  #  #configureFlags = [ "LDFLAGS=-L${pkgs.xen}/lib" ];
+  #  LDFLAGS = "-static -L${pkgs.xen}/lib -lxencall";
+  #  ac_cv_lib_xenctrl_xc_kexec_load = "yes";
+  #});
+  xen-aware-kexec-tools = builtins.trace xen-aware-kexec-tools'.outPath xen-aware-kexec-tools';
 in
 {
   imports = [
@@ -43,11 +59,11 @@ in
       cp "${config.system.build.netbootRamdisk}/initrd" kexec/initrd
       cp "${config.system.build.kernel}/${config.system.boot.loader.kernelFile}" kexec/bzImage
       cp "${config.system.build.kexecRun}" kexec/run
-      cp "${pkgs.pkgsStatic.kexec-tools}/bin/kexec" kexec/kexec
+      #cp "${xen-aware-kexec-tools}/bin/kexec" kexec/kexec
       cp "${iprouteStatic}/bin/ip" kexec/ip
       ${lib.optionalString (pkgs.hostPlatform == pkgs.buildPlatform) ''
         kexec/ip -V
-        kexec/kexec --version
+        #kexec/kexec --version
       ''}
       tar -czvf $out/${config.system.kexec-installer.name}-${pkgs.stdenv.hostPlatform.system}.tar.gz kexec
     '';
